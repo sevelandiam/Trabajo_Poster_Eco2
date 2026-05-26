@@ -1,5 +1,0 @@
-print("Hola mundo")
-print("Hola desde la rama de Sebas")
-print("Hola otra vez desde la rama de Sebas")
-print("Hola desde la rama de Sebas por segunda vez")
-print("123")
