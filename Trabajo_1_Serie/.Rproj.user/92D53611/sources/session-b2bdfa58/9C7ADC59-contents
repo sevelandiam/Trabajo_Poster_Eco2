@@ -1,0 +1,10 @@
+install.packages("quantmod")
+library(quantmod)
+getSymbols("^GSPC", src = "yahoo", auto.assign = TRUE)
+data_sp <- data.frame(Fecha = index(⁠ GSPC ⁠), SP500=as.numeric(coredata(⁠ GSPC ⁠)[,4])) %>%
+  mutate(Fecha = as.Date(Fecha))
+data <- data_sp %>%
+  add_row(Fecha = as.Date("2026-03-11"), SP500 = 6775.80) %>%
+  arrange(Fecha)
+
+data <- na.omit(data)

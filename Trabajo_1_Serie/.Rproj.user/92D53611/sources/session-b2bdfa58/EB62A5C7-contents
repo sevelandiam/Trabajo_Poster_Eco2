@@ -1,0 +1,112 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                      Codigo Trabajo #1 Econometria II
+#Codigo Elaborado por: Jose David Mayorga Bonilla 
+#                      Sebastian Velandia Muñoz 
+#                      Juan Nicolás Rodríguez Forero 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#Paquetes y librerias:
+rm (list = ls())
+install.packages("fs")
+install.packages("here")
+install.packages("dplyr")
+install.packages("ggtime")
+install.packages("tidyverse")
+install.packages("tsibble")
+install.packages("feasts")
+install.packages("fable")
+install.packages("tseries")
+install.packages("FinTS")
+install.packages("lmtest")
+install.packages("urca")
+install.packages("zoo")
+library(fs)
+library(here)
+library(dplyr)
+library(ggtime)
+library(tidyverse)
+library(tsibble)
+library(feasts)
+library(fable)
+library(tseries)
+library(FinTS)
+library(lmtest)
+library(zoo)
+library(urca)
+library(forecast)
+library(readxl)
+#rutas relativas para correr el codigo en cualquier computador. 
+here::i_am("Codigo/Codigo_DeudaExterna.R")
+Directorio<-fs::path(here::here("Datos"))
+ruta_deuda<-fs::path(Directorio, "Serie de tiempo Deuda Externa.xlsx")
+base_serie<-readxl::read_excel(ruta_deuda, sheet = 2)
+view(base_serie) #para ver la base de datos xd 
+base_serie$Periodo<-zoo::as.yearmon(as.character(base_serie$Periodo), format = "%Y-%m")
+ggplot(base_serie, aes(x=Periodo,  y= Deuda_externa))+
+  geom_line()+
+  scale_x_yearmon(format = "%Y-%m", n=8)+
+  labs(title = "Serie de Tiempo Deuda Externa de Colombia",
+       x="Periodo",
+       y="Nivel de Deuda externa")
+Deuda_ts<-ts(base_serie$Deuda_externa,
+             start = c(2010, 1),
+             frequency = 12)
+adf.test(Deuda_ts)
+autoplot(Deuda_ts)
+diffdeuda<-diff(Deuda_ts)
+diffdeuda=na.omit(diffdeuda)
+view(diffdeuda)
+autoplot(diffdeuda,
+         title="ola",
+         x="Periodo",
+         y="Diferencia de la deuda",
+         color="darkblue")
+adf.test(diffdeuda) #dickey fuller para la diferencia. 
+acf(diffdeuda)
+pacf(diffdeuda)
+par(mfrow = c(1, 2))
+acf(diffdeuda, main = "FAC - Deuda diferenciada")
+pacf(diffdeuda, main = "FACP - Deuda diferenciada")
+par(mfrow = c(1, 1))
+modelo1<-arima(diffdeuda, order = c(1,0,1))
+modelo2 <- arima(diffdeuda, order= c(1,0,2))
+modelo3 <- arima(diffdeuda, order = c(0,0,2))
+modelo4 <- arima(diffdeuda, order = c(1,0,0))
+modelo5 <- arima(diffdeuda, order = c(0,0,0))
+AIC(modelo1)
+AIC(modelo2)
+AIC(modelo3)
+AIC(modelo4)
+AIC(modelo5)
+BIC(modelo1)
+BIC(modelo2)
+BIC(modelo3)
+BIC(modelo4)
+BIC(modelo5)
+tabla_modelos <- data.frame(
+  Modelo = c("ARMA(1,1)", "ARMA(1,2)", "ARMA(0,2)", "ARMA(1,0)", "ARMA(0,0)"),
+  AIC = c(
+    AIC(modelo1),AIC(modelo2), AIC(modelo3), AIC(modelo4), AIC(modelo5)
+  ),
+  BIC = c( BIC(modelo1),BIC(modelo2),BIC(modelo3),BIC(modelo4),BIC(modelo5)
+  )
+)
+tabla_modelos
+residuos3 <- residuals(modelo3)
+par(mfrow=c(1,2))
+acf(residuos3)
+pacf(residuos3)
+Box.test(residuos3,
+         lag=6,
+         type = "Ljung-Box")
+rediduos_cuadrado <- residuos3^2 #si hay correlacion en la varianza significa heterocedastico. 
+par(mfrow=c(1,2))
+acf(rediduos_cuadrado)
+pacf(rediduos_cuadrado)
+ArchTest(residuos3)
+jarque.bera.test(residuos3)
+auto.arima(diffdeuda,
+           trace = TRUE)
+modelosebas <- arima(diffdeuda, order = c(0,0,1))
+residuossebas <- residuals(modelosebas)
+ArchTest(residuossebas)
+#solucion heterocedasticidad y normalidad 

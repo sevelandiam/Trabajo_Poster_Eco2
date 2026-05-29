@@ -1,0 +1,97 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                                     trabajo econometria 
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+install.packages("forecast")
+install.packages("boot")
+library(forecast)
+library(readxl)
+library(ggplot2)
+base_econo2<-read_excel('/Users/nico/Documents/6 Semestre/Econometria 2 /Serie de tiempo Deuda Externa.xlsx', sheet = 2)
+View(base_econo2)
+ggplot(base_econo2, aes(x=Periodo, y=Deuda_externa, group = 1))+
+  geom_line()+
+  geom_point()+
+  scale_x_discrete(breaks = base_econo2$Periodo[seq(1, nrow(base_econo2), by = 30)])
+  labs(title = "Deuda externa de Colombia", 
+       X= 'Año', 
+       Y= 'Deuda externa de Colombia')
+acf(base_econo2,
+    main= "Funcion de AutoCorrelacion FAC")
+pacf(base_econo2,
+     main= "Funcion de Autocorrelacion Parcial FACP")
+#con valores solo de la deuda. 
+deuda_columna<-ts(base_econo2$Deuda_externa,
+                  start = c(2010-01),
+                  frequency = 12)
+acf(deuda_columna,
+    main = "Funcion de Autocorrelacion FAC")
+pacf(deuda_columna,
+     main= "Funcion de Autocorrelacion Parcial FACP")
+#diferenciar la serie
+diferenciada_1<-diff(deuda_columna)
+ggplot(diferenciada_1, aes(x=Periodo, Y=))
+plot(diferenciada_1,
+     main ="Primera diferencia de la serie Deuda externa",
+     xlab= 'Deuda Externa',
+     ylab= "Periodo")
+acf(diferenciada_1,
+    main="FAC diferenciada 1")
+pacf(diferenciada_1,
+     main='FACP')
+auto.arima(diferenciada_1,ic = "bic")
+modelo1<-arima(diferenciada_1, order = c(1,0,0))
+modelo2<-arima(diferenciada_1, order = c(2,0,0))
+modelo3<-arima(diferenciada_1, order = c(1,0,1))
+modelo4<-arima(diferenciada_1, order = c(0,0,1))
+modelo5<-arima(diferenciada_1, order = c(0,0,2))
+modelo6<-arima(diferenciada_1, order = c(3,0,2))
+modelo7<-arima(diferenciada_1, order = c(0,0,0))
+AIC(modelo1, modelo2, modelo3, modelo4, modelo5, modelo6, modelo7)
+BIC(modelo1, modelo2, modelo3, modelo4, modelo5, modelo6, modelo7)
+library(boot)
+
+# Serie usada en el modelo
+serie <- as.numeric(diffdeuda)
+
+# Modelo original
+modelo_original <- arima(serie, order = c(1,0,1), include.mean = TRUE)
+
+# Función bootstrap
+boot_arima <- function(data, indices) {
+  serie_boot <- data[indices]
+  
+  modelo_boot <- try(
+    arima(serie_boot, order = c(1,0,1), include.mean = TRUE),
+    silent = TRUE
+  )
+  
+  if (inherits(modelo_boot, "try-error")) {
+    return(rep(NA, length(coef(modelo_original))))
+  }
+  
+  coef(modelo_boot)
+}
+
+set.seed(123)
+
+resultado_boot <- boot(
+  data = serie,
+  statistic = boot_arima,
+  R = 1000
+)
+
+# Errores estándar bootstrap
+errores_boot <- apply(resultado_boot$t, 2, sd, na.rm = TRUE)
+
+# Tabla final
+tabla_boot <- data.frame(
+  Coeficiente = names(coef(modelo_original)),
+  Estimacion = coef(modelo_original),
+  Error_bootstrap = errores_boot,
+  t_bootstrap = coef(modelo_original) / errores_boot,
+  p_value_bootstrap = 2 * (1 - pnorm(abs(coef(modelo_original) / errores_boot)))
+)
+
+tabla_boot
+
